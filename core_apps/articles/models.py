@@ -26,8 +26,18 @@ class Article(TimeStampedModel):
     def estimated_reading_time(self):
         return ArticleReadTimeEngine.estimate_reading_time(self)
 
+    @property
     def view_count(self):
         return self.article_views.count()
+
+    @property
+    def average_rating(self):
+        ratings = self.ratings.all()
+        if ratings.count() > 0:
+            total_rating = sum(rating.rating for rating in ratings)
+            average_rating = total_rating / ratings.count()
+            return round(average_rating, 2)
+        return None
 
 
 class ArticleView(TimeStampedModel):
