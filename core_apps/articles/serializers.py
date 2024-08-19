@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core_apps.articles.models import Article, ArticleView
+from core_apps.articles.models import Article, ArticleView, Clap
 from core_apps.profiles.serializers import ProfileSerializer
 from core_apps.bookmarks.models import Bookmark
 from core_apps.bookmarks.serializers import BookmarkSerializer
@@ -36,9 +36,13 @@ class ArticleSerializer(serializers.ModelSerializer):
     average_rating = serializers.ReadOnlyField()
     bookmarks_count = serializers.SerializerMethodField()
     bookmarks = serializers.SerializerMethodField()
+    claps = serializers.SerializerMethodField()
+
+    def get_claps(self, obj):
+        return obj.claps.count()
 
     def get_bookmarks_count(self, obj):
-        return Bookmark.objects.filter(article=obj).count()
+        return obj.bookmarks.count()
 
     def get_bookmarks(self, obj):
         bookmarks = Bookmark.objects.filter(article=obj)
@@ -48,7 +52,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         return obj.average_rating
 
     def get_views(self, obj):
-        return ArticleView.objects.filter(article=obj).count()
+        return obj.article_views.count()
 
     def get_banner_image(self, obj):
         return obj.banner_image.url
@@ -97,6 +101,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             "estimated_reading_time",
             "author_info",
             "views",
+            "claps",
             "average_rating",
             "bookmarks_count",
             "bookmarks",
@@ -105,4 +110,17 @@ class ArticleSerializer(serializers.ModelSerializer):
             "banner_image",
             "created_at",
             "updated_at",
+        ]
+
+
+class ClapSerializer(serializers.ModelSerializer):
+    article_title = serializers.CharField(source="article.title", read_only=True)
+    user_first_name = serializers.CharField(source="user.first_name", read_only=True)
+
+    class Meta:
+        model = Clap
+        fields = [
+            "id",
+            "user_first_name",
+            "article_title"
         ]

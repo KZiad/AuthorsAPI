@@ -6,9 +6,9 @@ from rest_framework import filters, generics, permissions, status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 
-from .models import Article, ArticleView
+from .models import Article, ArticleView, Clap
 
-from .serializers import ArticleSerializer
+from .serializers import ArticleSerializer, ClapSerializer
 from .filters import ArticleFilter
 from .pagination import ArticlePagination
 from .renderers import ArticleJSONRenderer, ArticlesJSONRenderer
@@ -69,3 +69,43 @@ class ArticleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         ArticleView.record_view(article=instance, user=request.user, viewer_ip=viewer_ip)
 
         return Response(serializer.data)
+
+
+class ClapArticleView(generics.CreateAPIView, generics.DestroyAPIView):
+    queryset = Clap.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ClapSerializer
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        article_id = kwargs.get("article_id")
+        try:
+            article = Article.objects.get(id=article_id)
+        except Article.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if Clap.objects.filter(user=user, article=article).exists():
+            return Response(
+                {
+                    "detail": "You have already clapped on this article"
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+        clap = Clap.objects.create(user=user, article=article)
+        clap.save()
+        return Response({
+            "detail": "Clap has been created"
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        article_id = kwargs.get("article_id")
+        try:
+            article = Article.objects.get(id=article_id)
+        except Article.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            clap = Clap.objects.get(user=user, article=article)
+        except Clap.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        clap.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
